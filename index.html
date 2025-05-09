@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CARTÓRIO CIVIL DE BERTIOGA</title>
+  <link href="css/bootstrap.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <script src="lib/jquery-3.3.1.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    .barraTop {
+      height: 10px;
+    }
+
+    .barraSuperior {
+      height: 120px;
+      margin-bottom: 10px;
+    }
+
+    .uespiLogo {
+      max-height: 100px;
+    }
+
+    .uespiTexto {
+      font-size: 22pt;
+      font-weight: 700;
+      color: #003a5f;
+    }
+
+    .subtitulo {
+      font-size: 26px;
+      font-weight: 400;
+    }
+
+    .senhaAtual {
+      background-color: #003a5f;
+      color: white;
+      padding: 25px 60px 20px 60px;
+      text-align: left;
+    }
+
+    .senhaAtualTexto {
+      font-size: 28pt;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #senhaAtualNumero {
+      font-size: 48pt;
+      font-weight: 800;
+      margin-left: 10px;
+    }
+
+    #mesaAtual {
+      font-size: 28pt;
+      font-weight: bold;
+      margin-left: auto;
+    }
+
+    #servicoAtual {
+      font-size: 22pt;
+      font-weight: 600;
+      margin-top: 15px;
+      text-transform: uppercase;
+    }
+
+    .ultimaSenha {
+      font-weight: 500;
+      background-color: #ccc;
+      margin-top: 30px;
+      font-size: 22px;
+      width: 100%;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 25px;
+      text-align: center;
+      border-radius: 12px;
+      height: 220px; /* 🔺 altura aumentada */
+      box-sizing: border-box;
+    }
+
+    #ultimaSenhaTexto {
+      font-size: 24px;
+      color: #a50;
+      font-weight: bold;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    #ultimaSenhaHistorico div {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    #inputManualSenha {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      font-size: 24px;
+      padding: 10px 20px;
+      display: none;
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 8px;
+      box-shadow: 0px 2px 10px rgba(0,0,0,0.2);
+      color: #333333;
+    }
+  </style>
+</head>
+<body>
+  <div class="barraTop">&nbsp;</div>
+  <div class="container page">
+    <div class="row barraSuperior">
+      <div class="col-xs-1">
+        <img src="imagens/uespi.png" class="uespiLogo">
+      </div>
+      <div class="col-xs-11" style="text-align: right;">
+        <span class="uespiTexto">AGUARDE SUA SENHA</span><br>
+        <span class="subtitulo">Cartório Cívil de <strong>BERTIOGA</strong></span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="senhaAtual">
+        <div class="senhaAtualTexto">
+          <span>SENHA <span id="senhaAtualNumero">----</span></span>
+          <span id="mesaAtual">MESA</span>
+        </div>
+        <div id="servicoAtual">NENHUMA CHAMADA</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-12 text-center">
+        <div class="ultimaSenha">
+          <span id="ultimaSenhaTexto">ÚLTIMAS SENHAS CHAMADAS</span>
+          <div id="ultimaSenhaHistorico">----</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="text" id="inputManualSenha" placeholder="Digite a senha..." maxlength="5" />
+  <audio id="audioChamada" src="audio/chamada.wav"></audio>
+
+  <script>
+    const mapaServicos = {
+      A: "EXPEDIR, RETIRAR OU AUTENTICAR DOCUMENTOS",
+      B: "ABRIR OU RECONHECER FIRMA",
+      C: "OUTROS",
+      D: "PRIORIDADE"
+    };
+
+    const mapaMesas = {
+      A: "MESA 1",
+      B: "MESA 2",
+      C: "MESA 3",
+      D: "MESA 4"
+    };
+
+    let contador = { A: 0, B: 0, C: 0, D: 0 };
+    let historicoSenhas = [];
+    const inputManual = document.getElementById("inputManualSenha");
+
+    function pad(num, size) {
+      let s = num + "";
+      while (s.length < size) s = "0" + s;
+      return s;
+    }
+
+    function chamarSenha(senha) {
+      const letra = senha.charAt(0);
+      const servico = mapaServicos[letra] || "-";
+      const mesa = mapaMesas[letra] || "-";
+
+      document.getElementById("senhaAtualNumero").textContent = senha;
+      document.getElementById("mesaAtual").textContent = mesa;
+      document.getElementById("servicoAtual").textContent = servico;
+
+      historicoSenhas.unshift([senha, servico, mesa]);
+      if (historicoSenhas.length > 4) historicoSenhas.pop();
+
+      document.getElementById("ultimaSenhaHistorico").innerHTML = historicoSenhas.map(
+        ([s, svc, m]) => `<div><span>${s}</span><span>${svc}</span><span>${m}</span></div>`
+      ).join("");
+
+      document.getElementById("audioChamada").play();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.addEventListener("keydown", (e) => {
+        const tecla = e.key.toUpperCase();
+
+        if (inputManual.style.display === "block") {
+          if (e.key === "Enter") {
+            const valor = inputManual.value.toUpperCase().trim();
+            if (/^[A-D]\d{4}$/.test(valor)) {
+              chamarSenha(valor);
+            } else {
+              alert("Formato inválido.");
+            }
+            inputManual.value = "";
+            inputManual.style.display = "none";
+          } else if (e.key === "Escape") {
+            inputManual.value = "";
+            inputManual.style.display = "none";
+          }
+          return;
+        }
+
+        if (tecla === "SHIFT") {
+          inputManual.style.display = "block";
+          inputManual.focus();
+          return;
+        }
+
+        if (["A", "B", "C", "D"].includes(tecla)) {
+          contador[tecla]++;
+          const senha = tecla + pad(contador[tecla], 4);
+          chamarSenha(senha);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
