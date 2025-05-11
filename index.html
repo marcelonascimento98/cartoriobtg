@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,6 +7,7 @@
   <link href="css/bootstrap.css" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <script src="lib/jquery-3.3.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,38 +15,30 @@
       margin: 0;
       padding: 0;
     }
-
-    .barraTop {
-      height: 10px;
-    }
-
+    .barraTop { height: 10px; }
     .barraSuperior {
       height: 120px;
       margin-bottom: 10px;
     }
-
     .uespiLogo {
       max-height: 100px;
+      cursor: pointer;
     }
-
     .uespiTexto {
       font-size: 22pt;
       font-weight: 700;
       color: #003a5f;
     }
-
     .subtitulo {
       font-size: 26px;
       font-weight: 400;
     }
-
     .senhaAtual {
       background-color: #003a5f;
       color: white;
       padding: 25px 60px 20px 60px;
       text-align: left;
     }
-
     .senhaAtualTexto {
       font-size: 28pt;
       font-weight: bold;
@@ -53,26 +47,22 @@
       align-items: center;
       flex-wrap: wrap;
     }
-
     #senhaAtualNumero {
       font-size: 48pt;
       font-weight: 800;
       margin-left: 10px;
     }
-
     #mesaAtual {
       font-size: 28pt;
       font-weight: bold;
       margin-left: auto;
     }
-
     #servicoAtual {
       font-size: 22pt;
       font-weight: 600;
       margin-top: 15px;
       text-transform: uppercase;
     }
-
     .ultimaSenha {
       font-weight: 500;
       background-color: #ccc;
@@ -85,10 +75,9 @@
       padding: 25px;
       text-align: center;
       border-radius: 12px;
-      height: 220px; /* 🔺 altura aumentada */
+      height: 220px;
       box-sizing: border-box;
     }
-
     #ultimaSenhaTexto {
       font-size: 24px;
       color: #a50;
@@ -96,7 +85,6 @@
       margin-bottom: 12px;
       display: block;
     }
-
     #ultimaSenhaHistorico div {
       margin: 4px 0;
       display: flex;
@@ -106,7 +94,6 @@
       font-weight: 600;
       text-transform: uppercase;
     }
-
     #inputManualSenha {
       position: fixed;
       top: 20px;
@@ -129,7 +116,7 @@
   <div class="container page">
     <div class="row barraSuperior">
       <div class="col-xs-1">
-        <img src="imagens/uespi.png" class="uespiLogo">
+        <img src="imagens/uespi.png" class="uespiLogo" ondblclick="exportarXLSX()" title="Clique duas vezes para exportar Excel">
       </div>
       <div class="col-xs-11" style="text-align: right;">
         <span class="uespiTexto">AGUARDE SUA SENHA</span><br>
@@ -177,7 +164,9 @@
 
     let contador = { A: 0, B: 0, C: 0, D: 0 };
     let historicoSenhas = [];
+    let registroXLSX = [];
     const inputManual = document.getElementById("inputManualSenha");
+    const audio = document.getElementById("audioChamada");
 
     function pad(num, size) {
       let s = num + "";
@@ -185,10 +174,17 @@
       return s;
     }
 
+    function tocarAudio() {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.play();
+    }
+
     function chamarSenha(senha) {
       const letra = senha.charAt(0);
       const servico = mapaServicos[letra] || "-";
       const mesa = mapaMesas[letra] || "-";
+      const agora = new Date().toLocaleString("pt-BR");
 
       document.getElementById("senhaAtualNumero").textContent = senha;
       document.getElementById("mesaAtual").textContent = mesa;
@@ -201,7 +197,19 @@
         ([s, svc, m]) => `<div><span>${s}</span><span>${svc}</span><span>${m}</span></div>`
       ).join("");
 
-      document.getElementById("audioChamada").play();
+      tocarAudio();
+
+      const ultima = [...registroXLSX].reverse().find(r => r.Mesa === mesa && !r.Finalizada);
+      if (ultima) ultima.Finalizada = agora;
+
+      registroXLSX.push({ Senha: senha, Mesa: mesa, Chamada: agora, Finalizada: "" });
+    }
+
+    function exportarXLSX() {
+      const worksheet = XLSX.utils.json_to_sheet(registroXLSX);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Senhas");
+      XLSX.writeFile(workbook, "relatorio_senhas.xlsx");
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -211,11 +219,23 @@
         if (inputManual.style.display === "block") {
           if (e.key === "Enter") {
             const valor = inputManual.value.toUpperCase().trim();
-            if (/^[A-D]\d{4}$/.test(valor)) {
-              chamarSenha(valor);
+
+            if (valor === "") {
+              tocarAudio();
+              inputManual.value = "";
+              inputManual.style.display = "none";
+              return;
+            }
+
+            if (/^[A-D]\d{1,4}$/.test(valor)) {
+              const letra = valor.charAt(0);
+              const numero = valor.slice(1).padStart(4, '0');
+              const senha = letra + numero;
+              chamarSenha(senha);
             } else {
               alert("Formato inválido.");
             }
+
             inputManual.value = "";
             inputManual.style.display = "none";
           } else if (e.key === "Escape") {
@@ -231,7 +251,7 @@
           return;
         }
 
-        if (["A", "B", "C", "D"].includes(tecla)) {
+        if (!inputManual.matches(':focus') && ["A", "B", "C", "D"].includes(tecla)) {
           contador[tecla]++;
           const senha = tecla + pad(contador[tecla], 4);
           chamarSenha(senha);
